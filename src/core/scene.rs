@@ -22,6 +22,7 @@ impl Scene {
         any.then_some((min, max))
     }
 
+    #[allow(dead_code)]
     pub fn center(&self) -> Vec3 {
         self.bounds()
             .map(|(min, max)| (min + max) * 0.5)
@@ -43,9 +44,11 @@ impl Scene {
 pub struct Mesh {
     pub vertices: Vec<Vec3>,
     pub indices: Vec<u32>,
+    #[allow(dead_code)]
     pub normals: Vec<Vec3>,
     pub uvs: Vec<Vec2>,
     pub material_id: Option<usize>,
+    #[allow(dead_code)]
     pub name: String,
 }
 
@@ -71,6 +74,7 @@ impl Mesh {
         Some([self.uvs[i0], self.uvs[i1], self.uvs[i2]])
     }
 
+    #[allow(dead_code)]
     pub fn triangle_normal(&self, tri: usize) -> Vec3 {
         let [a, b, c] = self.triangle(tri);
         (b - a).cross(c - a).normalize_or_zero()
@@ -79,6 +83,7 @@ impl Mesh {
 
 #[derive(Debug, Clone)]
 pub struct Material {
+    #[allow(dead_code)]
     pub name: String,
     pub base_color: [f32; 4],
     pub texture: Option<TextureData>,
@@ -109,7 +114,12 @@ impl TextureData {
         let y = (v * self.height as f32) as u32 % self.height;
         let idx = ((y * self.width + x) * 4) as usize;
         if idx + 3 < self.pixels.len() {
-            [self.pixels[idx], self.pixels[idx + 1], self.pixels[idx + 2], self.pixels[idx + 3]]
+            [
+                self.pixels[idx],
+                self.pixels[idx + 1],
+                self.pixels[idx + 2],
+                self.pixels[idx + 3],
+            ]
         } else {
             [204, 204, 204, 255]
         }

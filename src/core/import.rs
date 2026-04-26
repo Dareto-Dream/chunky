@@ -103,8 +103,8 @@ fn load_obj(path: &Path) -> Result<Scene> {
 }
 
 fn load_gltf(path: &Path) -> Result<Scene> {
-    let (document, buffers, images) = gltf::import(path)
-        .with_context(|| format!("Failed to load GLTF: {}", path.display()))?;
+    let (document, buffers, images) =
+        gltf::import(path).with_context(|| format!("Failed to load GLTF: {}", path.display()))?;
 
     let mut meshes = Vec::new();
     let mut materials: Vec<Material> = document
@@ -112,21 +112,25 @@ fn load_gltf(path: &Path) -> Result<Scene> {
         .map(|mat| {
             let pbr = mat.pbr_metallic_roughness();
             let [r, g, b, a] = pbr.base_color_factor();
-            let texture = pbr
-                .base_color_texture()
-                .and_then(|t| {
-                    let src = t.texture().source().index();
-                    images.get(src).and_then(|img| {
-                        let pixels = match img.format {
-                            gltf::image::Format::R8G8B8 => {
-                                img.pixels.chunks(3).flat_map(|c| [c[0], c[1], c[2], 255]).collect()
-                            }
-                            gltf::image::Format::R8G8B8A8 => img.pixels.clone(),
-                            _ => return None,
-                        };
-                        Some(TextureData { width: img.width, height: img.height, pixels })
+            let texture = pbr.base_color_texture().and_then(|t| {
+                let src = t.texture().source().index();
+                images.get(src).and_then(|img| {
+                    let pixels = match img.format {
+                        gltf::image::Format::R8G8B8 => img
+                            .pixels
+                            .chunks(3)
+                            .flat_map(|c| [c[0], c[1], c[2], 255])
+                            .collect(),
+                        gltf::image::Format::R8G8B8A8 => img.pixels.clone(),
+                        _ => return None,
+                    };
+                    Some(TextureData {
+                        width: img.width,
+                        height: img.height,
+                        pixels,
                     })
-                });
+                })
+            });
             Material {
                 name: mat.name().unwrap_or("material").to_string(),
                 base_color: [r, g, b, a],
@@ -180,7 +184,14 @@ fn load_gltf(path: &Path) -> Result<Scene> {
                 let material_id = primitive.material().index();
                 let name = mesh.name().unwrap_or("mesh").to_string();
 
-                meshes.push(Mesh { vertices: positions, indices, normals, uvs, material_id, name });
+                meshes.push(Mesh {
+                    vertices: positions,
+                    indices,
+                    normals,
+                    uvs,
+                    material_id,
+                    name,
+                });
             }
         }
     }
@@ -195,7 +206,7 @@ fn load_gltf(path: &Path) -> Result<Scene> {
 }
 
 fn load_stl(path: &Path) -> Result<Scene> {
-    use std::io::{BufReader, Read};
+    use std::io::Read;
     let mut file = std::fs::File::open(path)?;
     let mut data = Vec::new();
     file.read_to_end(&mut data)?;
@@ -232,11 +243,20 @@ fn load_stl(path: &Path) -> Result<Scene> {
             }
         }
     } else {
-        return Err(anyhow!("Unsupported ASCII STL — convert to binary STL first"));
+        return Err(anyhow!(
+            "Unsupported ASCII STL — convert to binary STL first"
+        ));
     }
 
     let uvs = vec![Vec2::ZERO; vertices.len()];
-    let mesh = Mesh { vertices, indices, normals, uvs, material_id: Some(0), name: "stl".into() };
+    let mesh = Mesh {
+        vertices,
+        indices,
+        normals,
+        uvs,
+        material_id: Some(0),
+        name: "stl".into(),
+    };
     let scene = Scene {
         meshes: vec![mesh],
         materials: vec![Material::default()],

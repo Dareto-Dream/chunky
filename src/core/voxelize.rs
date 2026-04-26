@@ -1,5 +1,6 @@
 use glam::{IVec3, Vec2, Vec3};
 use rayon::prelude::*;
+use std::collections::{HashSet, VecDeque};
 use std::sync::{Arc, Mutex};
 
 use crate::core::scene::{Material, Scene};
@@ -15,9 +16,9 @@ pub enum VoxelizeMode {
 #[derive(Debug, Clone)]
 pub struct VoxelizeSettings {
     pub mode: VoxelizeMode,
-    pub resolution: f32,       // blocks per unit
-    pub shell_thickness: u32,  // for surface mode
-    pub infill_density: f32,   // 0..1 for solid/hybrid
+    pub resolution: f32,      // blocks per unit
+    pub shell_thickness: u32, // for surface mode
+    pub infill_density: f32,  // 0..1 for solid/hybrid
 }
 
 impl Default for VoxelizeSettings {
@@ -42,12 +43,19 @@ pub fn voxelize(scene: &Scene, settings: &VoxelizeSettings) -> VoxelGrid {
     let mut grid = VoxelGrid::new(settings.resolution, origin);
 
     match settings.mode {
-        VoxelizeMode::Surface | VoxelizeMode::Hybrid => {
+        VoxelizeMode::Surface => {
             voxelize_surface(scene, &mut grid, settings);
+            thicken_surface(&mut grid, settings.shell_thickness);
         }
         VoxelizeMode::Solid => {
             voxelize_surface(scene, &mut grid, settings);
-            fill_solid(&mut grid);
+            thicken_surface(&mut grid, settings.shell_thickness);
+            fill_solid(&mut grid, 1.0);
+        }
+        VoxelizeMode::Hybrid => {
+            voxelize_surface(scene, &mut grid, settings);
+            thicken_surface(&mut grid, settings.shell_thickness);
+            fill_solid(&mut grid, settings.infill_density);
         }
     }
 
@@ -63,9 +71,7 @@ fn voxelize_surface(scene: &Scene, grid: &mut VoxelGrid, settings: &VoxelizeSett
         .meshes
         .iter()
         .enumerate()
-        .flat_map(|(mesh_idx, mesh)| {
-            (0..mesh.triangle_count()).map(move |tri| (mesh_idx, tri))
-        })
+        .flat_map(|(mesh_idx, mesh)| (0..mesh.triangle_count()).map(move |tri| (mesh_idx, tri)))
         .collect();
 
     let results: Vec<Vec<(IVec3, Voxel)>> = triangles
@@ -138,7 +144,9 @@ fn world_to_voxel_f32(world: Vec3, origin: Vec3, resolution: f32) -> Vec3 {
 }
 
 fn sample_color(
-    av: Vec3, bv: Vec3, cv: Vec3,
+    av: Vec3,
+    bv: Vec3,
+    cv: Vec3,
     uvs: Option<[Vec2; 3]>,
     point: Vec3,
     material: Option<&Material>,
@@ -197,9 +205,15 @@ fn triangle_aabb_intersect(a: Vec3, b: Vec3, c: Vec3, aabb_min: Vec3, aabb_max: 
 
     // 9 cross-product axes
     let axes_cross = [
-        Vec3::X.cross(ab), Vec3::X.cross(bc), Vec3::X.cross(ca),
-        Vec3::Y.cross(ab), Vec3::Y.cross(bc), Vec3::Y.cross(ca),
-        Vec3::Z.cross(ab), Vec3::Z.cross(bc), Vec3::Z.cross(ca),
+        Vec3::X.cross(ab),
+        Vec3::X.cross(bc),
+        Vec3::X.cross(ca),
+        Vec3::Y.cross(ab),
+        Vec3::Y.cross(bc),
+        Vec3::Y.cross(ca),
+        Vec3::Z.cross(ab),
+        Vec3::Z.cross(bc),
+        Vec3::Z.cross(ca),
     ];
 
     for axis in &axes_cross {
@@ -221,7 +235,8 @@ fn triangle_aabb_intersect(a: Vec3, b: Vec3, c: Vec3, aabb_min: Vec3, aabb_max: 
     // 1 triangle normal
     let tri_normal = ab.cross(bc);
     if tri_normal.length_squared() > 1e-10 {
-        let r = half.x * tri_normal.x.abs() + half.y * tri_normal.y.abs() + half.z * tri_normal.z.abs();
+        let r =
+            half.x * tri_normal.x.abs() + half.y * tri_normal.y.abs() + half.z * tri_normal.z.abs();
         let s = tri_normal.dot(a);
         if s.abs() > r {
             return false;
@@ -241,27 +256,102 @@ fn overlap_on_axis(axis: Vec3, a: Vec3, b: Vec3, c: Vec3, half: Vec3) -> bool {
     !(tri_min > r || tri_max < -r)
 }
 
-fn fill_solid(grid: &mut VoxelGrid) {
-    let Some((min, max)) = grid.bounds_voxel() else { return };
+fn thicken_surface(grid: &mut VoxelGrid, thickness: u32) {
+    if thickness <= 1 {
+        return;
+    }
 
-    // Scanline fill: for each Y slice, find min/max X for each Z row
-    for gy in min.y..=max.y {
-        for gz in min.z..=max.z {
-            let mut inside = false;
-            let mut last_surface = false;
-            for gx in min.x..=max.x {
-                let occupied = grid.is_occupied(IVec3::new(gx, gy, gz));
-                if occupied && !last_surface {
-                    inside = !inside;
+    let seeds: Vec<(IVec3, Voxel)> = grid
+        .iter_occupied()
+        .map(|(pos, voxel)| (pos, *voxel))
+        .collect();
+    let radius = thickness.saturating_sub(1) as i32;
+
+    for (pos, voxel) in seeds {
+        for dz in -radius..=radius {
+            for dy in -radius..=radius {
+                for dx in -radius..=radius {
+                    let offset = IVec3::new(dx, dy, dz);
+                    if offset.abs().max_element() <= radius {
+                        let target = pos + offset;
+                        if !grid.is_occupied(target) {
+                            grid.set_voxel(target, voxel);
+                        }
+                    }
                 }
-                if inside && !occupied {
-                    let color = find_nearby_color(grid, IVec3::new(gx, gy, gz));
-                    grid.set_voxel(IVec3::new(gx, gy, gz), Voxel::new(color));
-                }
-                last_surface = occupied;
             }
         }
     }
+}
+
+fn fill_solid(grid: &mut VoxelGrid, density: f32) {
+    let Some((min, max)) = grid.bounds_voxel() else {
+        return;
+    };
+    if density <= 0.0 {
+        return;
+    }
+
+    let flood_min = min - IVec3::ONE;
+    let flood_max = max + IVec3::ONE;
+    let mut exterior = HashSet::new();
+    let mut queue = VecDeque::new();
+    exterior.insert(flood_min);
+    queue.push_back(flood_min);
+
+    const NEIGHBORS: [IVec3; 6] = [
+        IVec3::new(1, 0, 0),
+        IVec3::new(-1, 0, 0),
+        IVec3::new(0, 1, 0),
+        IVec3::new(0, -1, 0),
+        IVec3::new(0, 0, 1),
+        IVec3::new(0, 0, -1),
+    ];
+
+    while let Some(pos) = queue.pop_front() {
+        for dir in NEIGHBORS {
+            let next = pos + dir;
+            if next.cmplt(flood_min).any() || next.cmpgt(flood_max).any() {
+                continue;
+            }
+            if grid.is_occupied(next) || !exterior.insert(next) {
+                continue;
+            }
+            queue.push_back(next);
+        }
+    }
+
+    let mut to_fill = Vec::new();
+    for gy in min.y..=max.y {
+        for gz in min.z..=max.z {
+            for gx in min.x..=max.x {
+                let pos = IVec3::new(gx, gy, gz);
+                if !grid.is_occupied(pos)
+                    && !exterior.contains(&pos)
+                    && passes_infill_density(pos, density)
+                {
+                    let color = find_nearby_color(grid, pos);
+                    to_fill.push((pos, Voxel::new(color)));
+                }
+            }
+        }
+    }
+
+    for (pos, voxel) in to_fill {
+        grid.set_voxel(pos, voxel);
+    }
+}
+
+fn passes_infill_density(pos: IVec3, density: f32) -> bool {
+    if density >= 1.0 {
+        return true;
+    }
+    let density = density.clamp(0.0, 1.0);
+    let mut hash = pos.x as u32;
+    hash = hash.wrapping_mul(0x9E37_79B9) ^ pos.y as u32;
+    hash = hash.wrapping_mul(0x85EB_CA6B) ^ pos.z as u32;
+    hash ^= hash >> 16;
+    (hash as f32 / u32::MAX as f32) < density
 }
 
 fn find_nearby_color(grid: &VoxelGrid, pos: IVec3) -> [u8; 3] {
@@ -279,4 +369,44 @@ fn find_nearby_color(grid: &VoxelGrid, pos: IVec3) -> [u8; 3] {
         }
     }
     [128, 128, 128]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hollow_cube_grid() -> VoxelGrid {
+        let mut grid = VoxelGrid::new(1.0, Vec3::ZERO);
+        for z in 0..=2 {
+            for y in 0..=2 {
+                for x in 0..=2 {
+                    if x == 0 || x == 2 || y == 0 || y == 2 || z == 0 || z == 2 {
+                        grid.set_voxel(IVec3::new(x, y, z), Voxel::new([200, 100, 50]));
+                    }
+                }
+            }
+        }
+        grid
+    }
+
+    #[test]
+    fn solid_fill_marks_enclosed_air() {
+        let mut grid = hollow_cube_grid();
+        assert!(!grid.is_occupied(IVec3::new(1, 1, 1)));
+
+        fill_solid(&mut grid, 1.0);
+
+        let center = grid.get_voxel(IVec3::new(1, 1, 1)).unwrap();
+        assert!(center.occupied);
+        assert_eq!(center.color, [200, 100, 50]);
+    }
+
+    #[test]
+    fn zero_density_hybrid_keeps_interior_empty() {
+        let mut grid = hollow_cube_grid();
+
+        fill_solid(&mut grid, 0.0);
+
+        assert!(!grid.is_occupied(IVec3::new(1, 1, 1)));
+    }
 }

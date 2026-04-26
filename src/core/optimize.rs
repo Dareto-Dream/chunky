@@ -1,6 +1,6 @@
 use glam::IVec3;
 
-use crate::core::voxel::{VoxelGrid, CHUNK_SIZE};
+use crate::core::voxel::VoxelGrid;
 
 #[derive(Debug, Clone)]
 pub struct OptimizeSettings {
@@ -62,6 +62,7 @@ fn remove_noise(grid: &mut VoxelGrid, min_neighbors: usize) {
     grid.chunks.retain(|_, chunk| !chunk.is_empty());
 }
 
+#[allow(dead_code)]
 pub fn is_face_visible(grid: &VoxelGrid, pos: IVec3, direction: IVec3) -> bool {
     !grid.is_occupied(pos + direction)
 }

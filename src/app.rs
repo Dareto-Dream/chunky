@@ -4,7 +4,7 @@ use std::sync::{mpsc, Arc};
 
 use crate::core::export::{export_region, export_schem, ExportSettings};
 use crate::core::import::load_model;
-use crate::core::optimize::{optimize, OptimizeSettings};
+use crate::core::optimize::OptimizeSettings;
 use crate::core::palette::{apply_palette, BlockDatabase, PaletteSettings};
 use crate::core::scene::Scene;
 use crate::core::voxel::VoxelGrid;
@@ -75,7 +75,11 @@ impl ChunkyApp {
         if let Some(render_state) = cc.wgpu_render_state.as_ref() {
             let device = &render_state.device;
             let renderer = VoxelRenderer::new(device, render_state.target_format);
-            render_state.renderer.write().callback_resources.insert(renderer);
+            render_state
+                .renderer
+                .write()
+                .callback_resources
+                .insert(renderer);
         }
 
         Self {
@@ -127,7 +131,10 @@ impl ChunkyApp {
     pub fn load_model_from_path(&mut self, path: PathBuf) {
         self.is_working = true;
         self.work_progress = 0.0;
-        self.work_label = format!("Loading {}...", path.file_name().unwrap_or_default().to_string_lossy());
+        self.work_label = format!(
+            "Loading {}...",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        );
         self.status_message = self.work_label.clone();
 
         let (tx, rx) = mpsc::channel();
@@ -148,7 +155,9 @@ impl ChunkyApp {
     }
 
     pub fn run_voxelization(&mut self) {
-        let Some(scene_arc) = self.scene.clone() else { return };
+        let Some(scene_arc) = self.scene.clone() else {
+            return;
+        };
         let settings = self.voxel_settings.clone();
         let scale = self.transform_scale;
         let offset = self.transform_offset;
@@ -189,7 +198,9 @@ impl ChunkyApp {
     }
 
     pub fn export_schematic(&mut self) {
-        let Some(grid) = self.voxel_grid.clone() else { return };
+        let Some(grid) = self.voxel_grid.clone() else {
+            return;
+        };
         let db = self.block_db.clone();
         let settings = ExportSettings {
             version: self.export_settings.version,
@@ -212,7 +223,10 @@ impl ChunkyApp {
                 let _ = tx.send(WorkerMsg::Progress(0.1, "Writing schematic...".into()));
                 match export_schem(&grid, &db, &settings, &path) {
                     Ok(_) => {
-                        let _ = tx.send(WorkerMsg::Progress(1.0, format!("Saved to {}", path.display())));
+                        let _ = tx.send(WorkerMsg::Progress(
+                            1.0,
+                            format!("Saved to {}", path.display()),
+                        ));
                     }
                     Err(e) => {
                         let _ = tx.send(WorkerMsg::Error(e.to_string()));
@@ -223,7 +237,9 @@ impl ChunkyApp {
     }
 
     pub fn export_region_files(&mut self) {
-        let Some(grid) = self.voxel_grid.clone() else { return };
+        let Some(grid) = self.voxel_grid.clone() else {
+            return;
+        };
         let db = self.block_db.clone();
         let settings = ExportSettings {
             version: self.export_settings.version,
@@ -244,7 +260,10 @@ impl ChunkyApp {
                 let _ = tx.send(WorkerMsg::Progress(0.1, "Generating chunks...".into()));
                 match export_region(&grid, &db, &settings, &dir) {
                     Ok(_) => {
-                        let _ = tx.send(WorkerMsg::Progress(1.0, format!("Saved to {}", dir.display())));
+                        let _ = tx.send(WorkerMsg::Progress(
+                            1.0,
+                            format!("Saved to {}", dir.display()),
+                        ));
                     }
                     Err(e) => {
                         let _ = tx.send(WorkerMsg::Error(e.to_string()));
@@ -262,8 +281,8 @@ impl ChunkyApp {
             None => return,
         };
 
-        let mut done = false;
         let mut last_msg = None;
+        let mut disconnected = false;
 
         // Drain all pending messages
         loop {
@@ -273,7 +292,7 @@ impl ChunkyApp {
                 }
                 Err(mpsc::TryRecvError::Empty) => break,
                 Err(mpsc::TryRecvError::Disconnected) => {
-                    done = true;
+                    disconnected = true;
                     break;
                 }
             }
@@ -295,35 +314,33 @@ impl ChunkyApp {
                     }
                     self.status_message = format!(
                         "Loaded: {} triangles",
-                        self.scene.as_ref().map(|s| s.total_triangles()).unwrap_or(0)
+                        self.scene
+                            .as_ref()
+                            .map(|s| s.total_triangles())
+                            .unwrap_or(0)
                     );
                     self.is_working = false;
-                    done = true;
                 }
                 WorkerMsg::VoxelsDone(grid) => {
                     let voxel_count = grid.total_voxels();
                     if let Some((min, max)) = grid.bounds_voxel() {
-                        let min_world = grid.voxel_to_world(min);
-                        let max_world = grid.voxel_to_world(max);
-                        self.camera.fit_to_bounds(min_world, max_world);
+                        self.camera
+                            .fit_to_bounds(min.as_vec3(), (max + glam::IVec3::ONE).as_vec3());
                     }
                     self.voxel_grid = Some(Arc::new(*grid));
                     self.gpu_dirty = true;
                     self.status_message = format!("Voxelized: {} blocks", voxel_count);
                     self.is_working = false;
-                    done = true;
                 }
                 WorkerMsg::Error(e) => {
                     self.status_message = format!("Error: {}", e);
                     self.is_working = false;
-                    done = true;
                 }
             }
-        } else if !done {
+        } else if !disconnected {
             self.rx = Some(rx);
         }
     }
-
 }
 
 impl eframe::App for ChunkyApp {

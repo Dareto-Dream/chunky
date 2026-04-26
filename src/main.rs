@@ -23,5 +23,9 @@ fn main() -> eframe::Result<()> {
         },
         ..Default::default()
     };
-    eframe::run_native("Chunky", options, Box::new(|cc| Ok(Box::new(app::ChunkyApp::new(cc)))))
+    eframe::run_native(
+        "Chunky",
+        options,
+        Box::new(|cc| Ok(Box::new(app::ChunkyApp::new(cc)))),
+    )
 }

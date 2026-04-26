@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use glam::{IVec3, Vec3};
+use std::collections::HashMap;
 
 pub const CHUNK_SIZE: i32 = 32;
 pub const CHUNK_SIZE_U: usize = CHUNK_SIZE as usize;
@@ -14,7 +14,11 @@ pub struct Voxel {
 
 impl Voxel {
     pub fn new(color: [u8; 3]) -> Self {
-        Self { occupied: true, color, block_id: 0 }
+        Self {
+            occupied: true,
+            color,
+            block_id: 0,
+        }
     }
 }
 
@@ -25,7 +29,9 @@ pub struct VoxelChunk {
 
 impl VoxelChunk {
     pub fn new() -> Self {
-        Self { voxels: Box::new([Voxel::default(); CHUNK_VOL]) }
+        Self {
+            voxels: Box::new([Voxel::default(); CHUNK_VOL]),
+        }
     }
 
     pub fn idx(lx: usize, ly: usize, lz: usize) -> usize {
@@ -58,20 +64,30 @@ impl Default for VoxelChunk {
 #[derive(Debug, Default, Clone)]
 pub struct VoxelGrid {
     pub chunks: HashMap<IVec3, VoxelChunk>,
-    pub resolution: f32,  // voxels per unit
-    pub origin: Vec3,     // world origin offset
+    pub resolution: f32, // voxels per unit
+    pub origin: Vec3,    // world origin offset
 }
 
 impl VoxelGrid {
     pub fn new(resolution: f32, origin: Vec3) -> Self {
-        Self { chunks: HashMap::new(), resolution, origin }
+        Self {
+            chunks: HashMap::new(),
+            resolution,
+            origin,
+        }
     }
 
+    #[allow(dead_code)]
     pub fn world_to_voxel(&self, world: Vec3) -> IVec3 {
         let local = (world - self.origin) * self.resolution;
-        IVec3::new(local.x.floor() as i32, local.y.floor() as i32, local.z.floor() as i32)
+        IVec3::new(
+            local.x.floor() as i32,
+            local.y.floor() as i32,
+            local.z.floor() as i32,
+        )
     }
 
+    #[allow(dead_code)]
     pub fn voxel_to_world(&self, voxel: IVec3) -> Vec3 {
         self.origin + Vec3::new(voxel.x as f32, voxel.y as f32, voxel.z as f32) / self.resolution
     }

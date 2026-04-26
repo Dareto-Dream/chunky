@@ -31,44 +31,116 @@ struct Uniforms {
 // Unit cube: 24 vertices (4 per face), 36 indices
 static CUBE_VERTICES: &[CubeVertex] = &[
     // -Z
-    CubeVertex { position: [0.0, 0.0, 0.0], normal: [0.0,  0.0, -1.0] },
-    CubeVertex { position: [1.0, 0.0, 0.0], normal: [0.0,  0.0, -1.0] },
-    CubeVertex { position: [1.0, 1.0, 0.0], normal: [0.0,  0.0, -1.0] },
-    CubeVertex { position: [0.0, 1.0, 0.0], normal: [0.0,  0.0, -1.0] },
+    CubeVertex {
+        position: [0.0, 0.0, 0.0],
+        normal: [0.0, 0.0, -1.0],
+    },
+    CubeVertex {
+        position: [1.0, 0.0, 0.0],
+        normal: [0.0, 0.0, -1.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 0.0],
+        normal: [0.0, 0.0, -1.0],
+    },
+    CubeVertex {
+        position: [0.0, 1.0, 0.0],
+        normal: [0.0, 0.0, -1.0],
+    },
     // +Z
-    CubeVertex { position: [1.0, 0.0, 1.0], normal: [0.0,  0.0,  1.0] },
-    CubeVertex { position: [0.0, 0.0, 1.0], normal: [0.0,  0.0,  1.0] },
-    CubeVertex { position: [0.0, 1.0, 1.0], normal: [0.0,  0.0,  1.0] },
-    CubeVertex { position: [1.0, 1.0, 1.0], normal: [0.0,  0.0,  1.0] },
+    CubeVertex {
+        position: [1.0, 0.0, 1.0],
+        normal: [0.0, 0.0, 1.0],
+    },
+    CubeVertex {
+        position: [0.0, 0.0, 1.0],
+        normal: [0.0, 0.0, 1.0],
+    },
+    CubeVertex {
+        position: [0.0, 1.0, 1.0],
+        normal: [0.0, 0.0, 1.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 1.0],
+        normal: [0.0, 0.0, 1.0],
+    },
     // -X
-    CubeVertex { position: [0.0, 0.0, 1.0], normal: [-1.0, 0.0,  0.0] },
-    CubeVertex { position: [0.0, 0.0, 0.0], normal: [-1.0, 0.0,  0.0] },
-    CubeVertex { position: [0.0, 1.0, 0.0], normal: [-1.0, 0.0,  0.0] },
-    CubeVertex { position: [0.0, 1.0, 1.0], normal: [-1.0, 0.0,  0.0] },
+    CubeVertex {
+        position: [0.0, 0.0, 1.0],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [0.0, 0.0, 0.0],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [0.0, 1.0, 0.0],
+        normal: [-1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [0.0, 1.0, 1.0],
+        normal: [-1.0, 0.0, 0.0],
+    },
     // +X
-    CubeVertex { position: [1.0, 0.0, 0.0], normal: [ 1.0, 0.0,  0.0] },
-    CubeVertex { position: [1.0, 0.0, 1.0], normal: [ 1.0, 0.0,  0.0] },
-    CubeVertex { position: [1.0, 1.0, 1.0], normal: [ 1.0, 0.0,  0.0] },
-    CubeVertex { position: [1.0, 1.0, 0.0], normal: [ 1.0, 0.0,  0.0] },
+    CubeVertex {
+        position: [1.0, 0.0, 0.0],
+        normal: [1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 0.0, 1.0],
+        normal: [1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 1.0],
+        normal: [1.0, 0.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 0.0],
+        normal: [1.0, 0.0, 0.0],
+    },
     // -Y
-    CubeVertex { position: [0.0, 0.0, 1.0], normal: [ 0.0, -1.0, 0.0] },
-    CubeVertex { position: [1.0, 0.0, 1.0], normal: [ 0.0, -1.0, 0.0] },
-    CubeVertex { position: [1.0, 0.0, 0.0], normal: [ 0.0, -1.0, 0.0] },
-    CubeVertex { position: [0.0, 0.0, 0.0], normal: [ 0.0, -1.0, 0.0] },
+    CubeVertex {
+        position: [0.0, 0.0, 1.0],
+        normal: [0.0, -1.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 0.0, 1.0],
+        normal: [0.0, -1.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 0.0, 0.0],
+        normal: [0.0, -1.0, 0.0],
+    },
+    CubeVertex {
+        position: [0.0, 0.0, 0.0],
+        normal: [0.0, -1.0, 0.0],
+    },
     // +Y
-    CubeVertex { position: [0.0, 1.0, 0.0], normal: [ 0.0,  1.0, 0.0] },
-    CubeVertex { position: [1.0, 1.0, 0.0], normal: [ 0.0,  1.0, 0.0] },
-    CubeVertex { position: [1.0, 1.0, 1.0], normal: [ 0.0,  1.0, 0.0] },
-    CubeVertex { position: [0.0, 1.0, 1.0], normal: [ 0.0,  1.0, 0.0] },
+    CubeVertex {
+        position: [0.0, 1.0, 0.0],
+        normal: [0.0, 1.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 0.0],
+        normal: [0.0, 1.0, 0.0],
+    },
+    CubeVertex {
+        position: [1.0, 1.0, 1.0],
+        normal: [0.0, 1.0, 0.0],
+    },
+    CubeVertex {
+        position: [0.0, 1.0, 1.0],
+        normal: [0.0, 1.0, 0.0],
+    },
 ];
 
 static CUBE_INDICES: &[u16] = &[
-    0,  1,  2,  0,  2,  3,   // -Z
-    4,  5,  6,  4,  6,  7,   // +Z
-    8,  9,  10, 8,  10, 11,  // -X
-    12, 13, 14, 12, 14, 15,  // +X
-    16, 17, 18, 16, 18, 19,  // -Y
-    20, 21, 22, 20, 22, 23,  // +Y
+    0, 1, 2, 0, 2, 3, // -Z
+    4, 5, 6, 4, 6, 7, // +Z
+    8, 9, 10, 8, 10, 11, // -X
+    12, 13, 14, 12, 14, 15, // +X
+    16, 17, 18, 16, 18, 19, // -Y
+    20, 21, 22, 20, 22, 23, // +Y
 ];
 
 // Offscreen formats. sRGB encodes gamma automatically so the voxel shader
@@ -305,13 +377,21 @@ impl VoxelRenderer {
 
     /// Create or resize offscreen color+depth textures when the viewport changes.
     pub fn ensure_offscreen(&mut self, device: &wgpu::Device, size: [u32; 2]) {
-        if size[0] == 0 || size[1] == 0 { return; }
-        if self.offscreen_size == size && self.offscreen_color.is_some() { return; }
+        if size[0] == 0 || size[1] == 0 {
+            return;
+        }
+        if self.offscreen_size == size && self.offscreen_color.is_some() {
+            return;
+        }
         self.offscreen_size = size;
 
         let color_tex = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("offscreen_color"),
-            size: wgpu::Extent3d { width: size[0], height: size[1], depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: size[0],
+                height: size[1],
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -323,7 +403,11 @@ impl VoxelRenderer {
 
         let depth_tex = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("offscreen_depth"),
-            size: wgpu::Extent3d { width: size[0], height: size[1], depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: size[0],
+                height: size[1],
+                depth_or_array_layers: 1,
+            },
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
@@ -438,7 +522,9 @@ impl VoxelRenderer {
     /// Draw the offscreen texture to the current egui render pass as a fullscreen
     /// quad. Call this from CallbackTrait::paint.
     pub fn blit<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
-        let Some(bg) = &self.blit_bind_group else { return };
+        let Some(bg) = &self.blit_bind_group else {
+            return;
+        };
         render_pass.set_pipeline(&self.blit_pipeline);
         render_pass.set_bind_group(0, bg, &[]);
         render_pass.draw(0..3, 0..1);
